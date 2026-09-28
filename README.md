@@ -9,11 +9,9 @@ Initially written by Daniel Schwalbe-Koda during Fall 2026 at UCLA.
 
 These visualizations were created to support the course MAT SCI 104 at UCLA.
 
-The full course content is available at: [course link TBD]()
-
 ## Overview
 
-This platform hosts interactive physics demonstrations for a course on Physics of Materials. Technical benefits:
+This platform hosts interactive physics demonstrations for a course on Science of Engineering Materials. Technical benefits:
 
 - **Consistent Layout**: All demos share a common layout with a render area and controls panel
 - **Demo Registry**: Easy registration and discovery of demos
@@ -32,7 +30,7 @@ This platform hosts interactive physics demonstrations for a course on Physics o
 
 ```bash
 # Clone the repository
-git clone https://github.com/dskoda/physics-materials-demos.git
+git clone https://github.com/dskoda/intro-matsci-demos.git
 cd physics-demos
 
 # Install dependencies
@@ -68,7 +66,7 @@ npm run preview
 ## Project Structure
 
 ```
-physics-demos/
+intro-matsci-demos/
 ├── src/
 │   ├── app/                    # Application core
 │   │   ├── router.ts           # Hash-based routing
