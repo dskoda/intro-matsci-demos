@@ -28,6 +28,7 @@ type Schedule = 'constant' | 'linear' | 'exponential' | 'step';
 
 interface DemoParams {
   n: number;
+  density: number;
   tHot: number;
   tCold: number;
   schedule: Schedule;
@@ -38,6 +39,7 @@ interface DemoParams {
 
 const defaultParams: DemoParams = {
   n: 36,
+  density: 0.85,
   tHot: 2.0,
   tCold: 0.1,
   schedule: 'linear',
@@ -47,7 +49,6 @@ const defaultParams: DemoParams = {
 };
 
 // Simulation constants (reduced LJ units)
-const DENSITY = 0.85;
 const DT = 0.005;
 const CUTOFF = 2.5;
 const THERMOSTAT_TAU = 0.05;
@@ -97,6 +98,7 @@ function speedColor(speed: number, tRef: number): string {
 class MDState {
   n = 0;
   L = 1;
+  rc = CUTOFF;
   x = new Float64Array(0);
   y = new Float64Array(0);
   vx = new Float64Array(0);
@@ -105,9 +107,12 @@ class MDState {
   fy = new Float64Array(0);
   time = 0;
 
-  reset(n: number, tHot: number): void {
+  reset(n: number, density: number, tHot: number): void {
     this.n = n;
-    this.L = Math.sqrt(n / DENSITY);
+    this.L = Math.sqrt(n / density);
+    // Minimum-image PBC only holds if the cutoff is well within half the box;
+    // shrink it automatically for small/dense boxes instead of breaking.
+    this.rc = Math.min(CUTOFF, this.L / 2 - 0.05);
     this.x = new Float64Array(n);
     this.y = new Float64Array(n);
     this.vx = new Float64Array(n);
@@ -154,12 +159,12 @@ class MDState {
 
   /** Compute LJ forces (with cutoff + energy shift) under periodic boundaries. Returns PE. */
   computeForces(): number {
-    const { n, L, x, y, fx, fy } = this;
+    const { n, L, rc, x, y, fx, fy } = this;
     fx.fill(0);
     fy.fill(0);
 
-    const rc2 = CUTOFF * CUTOFF;
-    const sr6c = Math.pow(1 / CUTOFF, 6);
+    const rc2 = rc * rc;
+    const sr6c = Math.pow(1 / rc, 6);
     const sr12c = sr6c * sr6c;
     const vShift = 4 * (sr12c - sr6c);
 
@@ -241,6 +246,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
   const params: DemoParams = { ...defaultParams };
   const urlParams = options.getParams();
   if (urlParams.n) params.n = parseInt(urlParams.n, 10);
+  if (urlParams.density) params.density = parseFloat(urlParams.density);
   if (urlParams.tHot) params.tHot = parseFloat(urlParams.tHot);
   if (urlParams.tCold) params.tCold = parseFloat(urlParams.tCold);
   if (urlParams.schedule) params.schedule = urlParams.schedule as Schedule;
@@ -262,7 +268,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
   });
 
   const state = new MDState();
-  state.reset(params.n, params.tHot);
+  state.reset(params.n, params.density, params.tHot);
 
   // Rolling energy history (per-particle KE, PE, total) over a fixed time window.
   let histTime: number[] = [];
@@ -273,7 +279,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
   let lastTTarget = params.tHot;
 
   function resetSimulation(): void {
-    state.reset(params.n, params.tHot);
+    state.reset(params.n, params.density, params.tHot);
     histTime = [];
     histKE = [];
     histPE = [];
@@ -288,18 +294,37 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     const simSection = createSection({ title: 'Simulation' });
     disposables.push(simSection);
 
-    const nSelect = createSelect({
+    const nSlider = createSlider({
       label: 'Particles (N)',
-      options: [16, 25, 36, 49, 64].map((v) => ({ value: String(v), label: String(v) })),
-      value: String(params.n),
+      min: 16,
+      max: 512,
+      step: 4,
+      value: params.n,
+      format: (v) => v.toFixed(0),
       onChange: (v) => {
-        params.n = parseInt(v, 10);
+        params.n = Math.round(v);
         resetSimulation();
         updateUrlParams();
       },
     });
-    disposables.push(nSelect);
-    simSection.content.appendChild(nSelect.element);
+    disposables.push(nSlider);
+    simSection.content.appendChild(nSlider.element);
+
+    const densitySlider = createSlider({
+      label: 'Density (particles / σ²)',
+      min: 0.2,
+      max: 1.1,
+      step: 0.05,
+      value: params.density,
+      format: (v) => v.toFixed(2),
+      onChange: (v) => {
+        params.density = v;
+        resetSimulation();
+        updateUrlParams();
+      },
+    });
+    disposables.push(densitySlider);
+    simSection.content.appendChild(densitySlider.element);
 
     const speedSlider = createSlider({
       label: 'Simulation speed',
@@ -338,7 +363,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
 
     const tColdSlider = createSlider({
       label: 'T_cold (LJ units)',
-      min: 0.01,
+      min: 0,
       max: 1.0,
       step: 0.01,
       value: params.tCold,
@@ -413,6 +438,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
   function updateUrlParams(): void {
     options.setParams({
       n: String(params.n),
+      density: params.density.toFixed(2),
       tHot: params.tHot.toFixed(2),
       tCold: params.tCold.toFixed(2),
       schedule: params.schedule,
@@ -577,6 +603,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     getParams() {
       return {
         n: String(params.n),
+        density: params.density.toFixed(2),
         tHot: params.tHot.toFixed(2),
         tCold: params.tCold.toFixed(2),
         schedule: params.schedule,
@@ -587,6 +614,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     },
     setParams(newParams: Record<string, string>) {
       if (newParams.n) params.n = parseInt(newParams.n, 10);
+      if (newParams.density) params.density = parseFloat(newParams.density);
       if (newParams.tHot) params.tHot = parseFloat(newParams.tHot);
       if (newParams.tCold) params.tCold = parseFloat(newParams.tCold);
       if (newParams.schedule) params.schedule = newParams.schedule as Schedule;
