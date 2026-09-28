@@ -48,8 +48,8 @@ export function renderHomePage(container: HTMLElement): void {
   container.innerHTML = `
     <div class="home-page">
       <header class="home-header">
-        <h1>MAT SCI 120 Demos</h1>
-        <p>Interactive visualizations for the course of Physics of Materials (UCLA, Winter 2026)</p>
+        <h1>MAT SCI 104 Demos</h1>
+        <p>Interactive visualizations for MAT SCI 104 (UCLA, Fall 2026)</p>
       </header>
       <div class="demo-grid" id="demo-grid"></div>
       <footer class="home-footer">

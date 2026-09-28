@@ -1,13 +1,13 @@
-# MSE104 Demo
+# MAT SCI 104 Demo
 
-An interactive visualization platform for MSE104.
+An interactive visualization platform for MAT SCI 104.
 The platform and demos were built with TypeScript and Canvas 2D.
 LLMs were used to code part of this repository, whose main goal is to support teaching endeavors.
-Initially written by Daniel Schwalbe-Koda during Winter 2026 at UCLA.
+Initially written by Daniel Schwalbe-Koda during Fall 2026 at UCLA.
 
 ## Course content
 
-These visualizations were created to support the course MSE104 at UCLA.
+These visualizations were created to support the course MAT SCI 104 at UCLA.
 
 The full course content is available at: [course link TBD]()
 
