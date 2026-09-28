@@ -151,7 +151,7 @@ export function renderNotFound(container: HTMLElement): void {
  * Set the document title.
  */
 export function setPageTitle(title?: string): void {
-  document.title = title ? `${title} | Physics Demos` : 'Physics Demos';
+  document.title = title ? `${title} | MatSci Demos` : 'MatSci Demos';
 }
 
 /**

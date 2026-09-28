@@ -1,6 +1,6 @@
 # Creating a New Demo
 
-This guide explains how to create a new demo for the Physics Demos platform.
+This guide explains how to create a new demo for the MatSci Demos platform.
 
 ## Quick Start
 
@@ -24,7 +24,7 @@ This guide explains how to create a new demo for the Physics Demos platform.
 4. **Register your demo**: Add your demo to `src/demos/index.ts`:
    ```typescript
    import { myDemo } from './my-demo/MyDemo';
-   
+
    export const allDemos = [
      demoTemplate,
      myDemo,
@@ -132,7 +132,7 @@ import { EventBinder, debounce, throttle } from '@core/utils/events';
    const disposables: Disposable[] = [];
    // ... create controls ...
    disposables.push(mySlider);
-   
+
    // In dispose():
    disposables.forEach(d => d.dispose());
    ```
@@ -153,20 +153,20 @@ import { AnimationLoop } from '@core/canvas/AnimationLoop';
 function create(container: HTMLElement, _options: DemoCreateOptions): DemoInstance {
   const canvas = new HiDPICanvas(container, { backgroundColor: '#000' });
   const ctx = canvas.ctx;
-  
+
   const loop = new AnimationLoop((dt, time) => {
     canvas.clear();
-    
+
     // Draw a moving circle
     const x = canvas.width / 2 + Math.cos(time) * 100;
     const y = canvas.height / 2 + Math.sin(time) * 100;
-    
+
     ctx.fillStyle = '#4a9eff';
     ctx.beginPath();
     ctx.arc(x, y, 20, 0, Math.PI * 2);
     ctx.fill();
   });
-  
+
   return {
     start: () => loop.start(),
     stop: () => loop.stop(),

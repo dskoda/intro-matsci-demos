@@ -1,5 +1,5 @@
 /**
- * Physics Demos Platform
+ * MSE104 Demos Platform
  *
  * Main entry point for the application.
  */
@@ -40,7 +40,7 @@ function init(): void {
   // Log startup
   if (import.meta.env.DEV) {
     // eslint-disable-next-line no-console
-    console.log(`Physics Demos initialized with ${allDemos.length} demo(s)`);
+    console.log(`MatSci Demos initialized with ${allDemos.length} demo(s)`);
   }
 }
 
