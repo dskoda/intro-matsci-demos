@@ -1,0 +1,4 @@
+# Public Assets
+
+Place static assets (images, fonts, etc.) in this directory.
+They will be copied to the dist folder during build.

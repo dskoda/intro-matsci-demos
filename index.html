@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Interactive visualizations for MSE104" />
+    <title>MSE104 Demos</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <nav id="navbar">
+        <a href="#/" class="nav-brand">MSE104 Demos</a>
+        <div class="nav-links">
+          <a href="#/">Home</a>
+          <div class="nav-dropdown">
+            <button class="nav-dropdown-btn">Demos ▾</button>
+            <div class="nav-dropdown-content" id="demos-dropdown"></div>
+          </div>
+        </div>
+      </nav>
+      <main id="main-content">
+        <!-- Content injected by router -->
+      </main>
+    </div>
+    <div id="toast-container"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
