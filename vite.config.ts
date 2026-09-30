@@ -21,6 +21,7 @@ export default defineConfig({
             resolve(__dirname, 'src/core/canvas/AnimationLoop.ts'),
             resolve(__dirname, 'src/core/canvas/Plot2D.ts'),
           ],
+          three: ['three'],
         },
       },
     },
