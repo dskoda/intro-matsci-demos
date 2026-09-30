@@ -9,6 +9,7 @@ import type { DemoDefinition } from '@app/types';
 import { lennardJonesDemo } from './lennard-jones/LennardJonesDemo';
 import { ljMD2DDemo } from './lj-2d-crystallization/LJMD2DDemo';
 import { crystalStructuresDemo } from './crystal-structures/CrystalStructuresDemo';
+import { millerIndicesDemo } from './miller-indices/MillerIndicesDemo';
 
 /**
  * All registered demos.
@@ -18,7 +19,8 @@ export const allDemos: DemoDefinition[] = [
   lennardJonesDemo,
   ljMD2DDemo,
   crystalStructuresDemo,
+  millerIndicesDemo,
   // Add new demos here:
 ];
 
-export { lennardJonesDemo, ljMD2DDemo, crystalStructuresDemo };
+export { lennardJonesDemo, ljMD2DDemo, crystalStructuresDemo, millerIndicesDemo };

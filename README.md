@@ -255,7 +255,7 @@ You can also trigger deployment manually:
 - **Vite** - Build tool and dev server
 - **TypeScript** - Type-safe JavaScript
 - **Canvas 2D** - Rendering
-- **three.js** - 3D rendering (crystal structures demo)
+- **three.js** - 3D rendering (crystal structures and Miller indices demos)
 - **ESLint + Prettier** - Code quality
 
 ## Contributing
