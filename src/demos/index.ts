@@ -13,6 +13,8 @@ import { millerIndicesDemo } from './miller-indices/MillerIndicesDemo';
 import { defects2DDemo } from './defects/Defects2DDemo';
 import { defects3DDemo } from './defects/Defects3DDemo';
 import { vacancyDiffusionDemo } from './vacancy-diffusion/VacancyDiffusionDemo';
+import { diffusionErfDemo } from './diffusion-erf/DiffusionErfDemo';
+import { diffusionAtomisticDemo } from './diffusion-atomistic/DiffusionAtomisticDemo';
 
 /**
  * All registered demos.
@@ -26,6 +28,8 @@ export const allDemos: DemoDefinition[] = [
   defects2DDemo,
   defects3DDemo,
   vacancyDiffusionDemo,
+  diffusionErfDemo,
+  diffusionAtomisticDemo,
   // Add new demos here:
 ];
 
@@ -37,4 +41,6 @@ export {
   defects2DDemo,
   defects3DDemo,
   vacancyDiffusionDemo,
+  diffusionErfDemo,
+  diffusionAtomisticDemo,
 };
