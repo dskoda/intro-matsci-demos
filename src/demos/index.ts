@@ -10,6 +10,8 @@ import { lennardJonesDemo } from './lennard-jones/LennardJonesDemo';
 import { ljMD2DDemo } from './lj-2d-crystallization/LJMD2DDemo';
 import { crystalStructuresDemo } from './crystal-structures/CrystalStructuresDemo';
 import { millerIndicesDemo } from './miller-indices/MillerIndicesDemo';
+import { defects2DDemo } from './defects/Defects2DDemo';
+import { defects3DDemo } from './defects/Defects3DDemo';
 
 /**
  * All registered demos.
@@ -20,7 +22,16 @@ export const allDemos: DemoDefinition[] = [
   ljMD2DDemo,
   crystalStructuresDemo,
   millerIndicesDemo,
+  defects2DDemo,
+  defects3DDemo,
   // Add new demos here:
 ];
 
-export { lennardJonesDemo, ljMD2DDemo, crystalStructuresDemo, millerIndicesDemo };
+export {
+  lennardJonesDemo,
+  ljMD2DDemo,
+  crystalStructuresDemo,
+  millerIndicesDemo,
+  defects2DDemo,
+  defects3DDemo,
+};
