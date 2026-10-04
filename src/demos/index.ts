@@ -12,6 +12,7 @@ import { crystalStructuresDemo } from './crystal-structures/CrystalStructuresDem
 import { millerIndicesDemo } from './miller-indices/MillerIndicesDemo';
 import { defects2DDemo } from './defects/Defects2DDemo';
 import { defects3DDemo } from './defects/Defects3DDemo';
+import { vacancyDiffusionDemo } from './vacancy-diffusion/VacancyDiffusionDemo';
 
 /**
  * All registered demos.
@@ -24,6 +25,7 @@ export const allDemos: DemoDefinition[] = [
   millerIndicesDemo,
   defects2DDemo,
   defects3DDemo,
+  vacancyDiffusionDemo,
   // Add new demos here:
 ];
 
@@ -34,4 +36,5 @@ export {
   millerIndicesDemo,
   defects2DDemo,
   defects3DDemo,
+  vacancyDiffusionDemo,
 };
