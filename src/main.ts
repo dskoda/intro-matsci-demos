@@ -7,7 +7,6 @@
 import './style.css';
 import { initRouter, onRouteChange } from '@app/router';
 import { registerDemos } from '@app/registry';
-import { renderNavDropdown } from '@app/layout';
 import { mountRoute } from '@app/mount';
 import { allDemos } from '@demos/index';
 
@@ -19,7 +18,6 @@ function init(): void {
   registerDemos(allDemos);
 
   // Render navbar dropdown with demo links
-  renderNavDropdown();
 
   // Initialize router and get initial route
   const initialRoute = initRouter();

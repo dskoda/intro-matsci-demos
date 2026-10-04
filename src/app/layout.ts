@@ -2,106 +2,71 @@
  * Layout Manager
  *
  * Handles rendering of the main layout including:
- * - Navbar with demos dropdown
- * - Home page with demo grid
+ * - Home page with demos listed per lecture
  * - Demo page layout
  */
 
 import { getAllDemos } from './registry';
 import type { DemoDefinition } from './types';
-import { navigateToDemo } from './router';
+import { lectures } from './lectures';
+
+const GITHUB_URL = 'https://github.com/dskoda/intro-matsci-demos';
 
 /**
- * Render the navbar demos dropdown.
- */
-export function renderNavDropdown(): void {
-  const dropdown = document.getElementById('demos-dropdown');
-  if (!dropdown) return;
-
-  const demos = getAllDemos();
-  dropdown.innerHTML = '';
-
-  if (demos.length === 0) {
-    const empty = document.createElement('span');
-    empty.className = 'nav-dropdown-empty';
-    empty.style.padding = '8px 16px';
-    empty.style.color = 'var(--color-text-muted)';
-    empty.textContent = 'No demos available';
-    dropdown.appendChild(empty);
-    return;
-  }
-
-  demos.forEach((demo) => {
-    const link = document.createElement('a');
-    link.href = `#/demo/${demo.id}`;
-    link.textContent = demo.title;
-    dropdown.appendChild(link);
-  });
-}
-
-/**
- * Render the home page with demo grid.
+ * Render the home page: course header followed by demos grouped per lecture.
  */
 export function renderHomePage(container: HTMLElement): void {
   const demos = getAllDemos();
+  const byId = new Map(demos.map((d) => [d.id, d]));
+  const listed = new Set<string>();
+
+  const sections = lectures.map((lecture) => {
+    const items = lecture.demos
+      .map((id) => byId.get(id))
+      .filter((d): d is DemoDefinition => d !== undefined);
+    items.forEach((d) => listed.add(d.id));
+    return demoSection(`Lecture ${lecture.number}: ${lecture.title}`, items);
+  });
+
+  const others = demos.filter((d) => !listed.has(d.id));
+  if (others.length > 0) sections.push(demoSection('Other demos', others));
 
   container.innerHTML = `
     <div class="home-page">
-      <header class="home-header">
-        <h1>MAT SCI 104 Demos</h1>
-        <p>Interactive visualizations for MAT SCI 104 (UCLA, Fall 2026)</p>
-      </header>
-      <div class="demo-grid" id="demo-grid"></div>
-      <footer class="home-footer">
-        <p>Created by Daniel Schwalbe-Koda</p>
-      </footer>
+      <div class="home-content">
+        <header class="home-header">
+          <h1>MAT SCI 104 Demos</h1>
+          <p>Interactive visualizations for UCLA's MAT SCI 104 course</p>
+        </header>
+        <p class="home-info">
+          <strong>Term:</strong> Fall 2026<br />
+          <strong>Instructor:</strong> Daniel Schwalbe-Koda<br />
+          <strong>Source:</strong> <a href="${GITHUB_URL}">GitHub repository</a>
+        </p>
+        <hr />
+        <h2>Lectures and Demos</h2>
+        ${sections.join('<hr />')}
+        <footer class="home-footer">
+          <p>Created by Daniel Schwalbe-Koda</p>
+        </footer>
+      </div>
     </div>
   `;
-
-  const grid = container.querySelector('#demo-grid');
-  if (!grid) return;
-
-  if (demos.length === 0) {
-    grid.innerHTML = `
-      <div class="demo-card">
-        <h3>No demos yet</h3>
-        <p>Add demos to get started. See the README for instructions.</p>
-      </div>
-    `;
-    return;
-  }
-
-  demos.forEach((demo) => {
-    const card = createDemoCard(demo);
-    grid.appendChild(card);
-  });
 }
 
-/**
- * Create a demo card element.
- */
-function createDemoCard(demo: DemoDefinition): HTMLElement {
-  const card = document.createElement('div');
-  card.className = 'demo-card';
-  card.innerHTML = `
-    <h3>${escapeHtml(demo.title)}</h3>
-    <p>${escapeHtml(demo.description)}</p>
+function demoSection(heading: string, demos: DemoDefinition[]): string {
+  const items = demos
+    .map(
+      (d) =>
+        `<li><a href="#/demo/${escapeHtml(d.id)}">${escapeHtml(d.title)}</a></li>`
+    )
+    .join('');
+  return `
+    <section class="lecture">
+      <h3>${escapeHtml(heading)}</h3>
+      ${items ? `<ul>${items}</ul>` : '<p class="lecture-empty">No demos for this lecture.</p>'}
+    </section>
   `;
-
-  const button = document.createElement('a');
-  button.className = 'demo-card-btn';
-  button.href = `#/demo/${demo.id}`;
-  button.textContent = 'Open Demo';
-  card.appendChild(button);
-
-  // Also allow clicking the card
-  card.addEventListener('click', (e) => {
-    if ((e.target as HTMLElement).tagName !== 'A') {
-      navigateToDemo(demo.id);
-    }
-  });
-
-  return card;
 }
 
 /**
