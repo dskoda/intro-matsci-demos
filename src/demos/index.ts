@@ -15,6 +15,7 @@ import { defects3DDemo } from './defects/Defects3DDemo';
 import { vacancyDiffusionDemo } from './vacancy-diffusion/VacancyDiffusionDemo';
 import { diffusionErfDemo } from './diffusion-erf/DiffusionErfDemo';
 import { diffusionAtomisticDemo } from './diffusion-atomistic/DiffusionAtomisticDemo';
+import { elasticPlasticDemo } from './elastic-plastic/ElasticPlasticDemo';
 
 /**
  * All registered demos.
@@ -30,6 +31,7 @@ export const allDemos: DemoDefinition[] = [
   vacancyDiffusionDemo,
   diffusionErfDemo,
   diffusionAtomisticDemo,
+  elasticPlasticDemo,
   // Add new demos here:
 ];
 
@@ -43,4 +45,5 @@ export {
   vacancyDiffusionDemo,
   diffusionErfDemo,
   diffusionAtomisticDemo,
+  elasticPlasticDemo,
 };
