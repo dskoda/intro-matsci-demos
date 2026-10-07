@@ -30,7 +30,9 @@ export const DT = 0.005;
 /** Langevin friction of the free atoms */
 const GAMMA = 1.0;
 /** Per-frame weight of the exponential filter on the measured force */
-const SMOOTH = 0.12;
+const SMOOTH = 0.08;
+/** Nominal Young's modulus, only used to size the grip damping */
+const NOMINAL_E = 80;
 
 const RC2 = RC * RC;
 const FC = 24 * (2 * Math.pow(RC, -13) - Math.pow(RC, -7));
@@ -65,6 +67,11 @@ const BAR_SIZES: Record<Dim, { nx: number; ny: number; nz: number }[]> = {
   ],
 };
 export const SIZE_COUNT = 4;
+
+/** How the right grip is driven (see Bar.advance) */
+export type Command =
+  | { mode: 'displacement'; ux: number; uy: number; speed: number }
+  | { mode: 'force'; force: number; uy: number; speed: number; maxUx: number };
 
 /** Calls fn(i, j, r2) for every pair of points closer than `cutoff` (cell grid) */
 function forEachPair(
@@ -199,8 +206,9 @@ export class Bar {
   forceSmooth = 0;
   /** Displacement filtered with the same lag as forceSmooth, for pairing force and displacement */
   uxSmooth = 0;
-  /** Residual force of the relaxed, unloaded bar (subtracted from readings) */
-  private force0 = 0;
+  private leftX = 0;
+  private gripMass = 1;
+  private gripDamp = 1;
   /** Velocity of the pulled grip; the thermostat relaxes atoms towards a linear profile of it */
   private gripVx = 0;
   private gripVy = 0;
@@ -303,21 +311,19 @@ export class Bar {
     }
   }
 
-  /** Short relaxation at low temperature; defines the reference state */
+  /**
+   * Relaxes the bar and defines the stress-free reference state. Surface
+   * relaxation first runs at T = 0 with both grips fixed; then the right grip is
+   * released at the target temperature, so the bar can expand thermally. The
+   * mean grip position becomes the zero-strain reference. Stress is therefore
+   * zero (on average) for an unloaded bar at any temperature.
+   */
   private relax(): void {
     const t = this.temperature;
     this.temperature = 0;
     for (let s = 0; s < 500; s++) this.integrate(false);
     this.temperature = t;
-    for (let s = 0; s < 300; s++) this.integrate(false);
-    let f0 = 0;
-    const nAvg = 400;
-    for (let s = 0; s < nAvg; s++) {
-      this.integrate(true);
-      f0 += this.force;
-    }
-    this.force0 = f0 / nAvg;
-    this.ref = Float64Array.from(this.pos);
+
     let lx = 0;
     let rx = 0;
     let nl = 0;
@@ -331,14 +337,34 @@ export class Bar {
         nr++;
       }
     }
-    this.gauge = rx / nr - lx / nl;
-    for (let i = 0; i < this.n; i++) {
-      this.frac[i] = clamp01((this.ref[3 * i]! - lx / nl) / this.gauge);
-    }
+    this.leftX = lx / nl;
+    this.gauge = rx / nr - this.leftX;
     this.rightBase = this.rightIdx.map((i) => this.pos[3 * i]!);
     this.rightBaseY = this.rightIdx.map((i) => this.pos[3 * i + 1]!);
+    this.gripMass = nr;
+    // damping of the grip: close to critical for the nominal stiffness
+    this.gripDamp = 2 * 0.8 * Math.sqrt(((NOMINAL_E * this.area) / this.gauge) * this.gripMass);
     this.ux = 0;
     this.uy = 0;
+    this.gripVx = 0;
+
+    // thermal settling with a free grip (zero applied force)
+    const settle = 1200;
+    const avgFrom = 600;
+    let sum = 0;
+    for (let s = 0; s < settle; s++) {
+      this.stepForceControlled(0, Infinity);
+      if (s >= avgFrom) sum += this.ux;
+    }
+    const shift = sum / (settle - avgFrom);
+    for (let k = 0; k < this.rightBase.length; k++) this.rightBase[k] = this.rightBase[k]! + shift;
+    this.gauge += shift;
+    this.ux = 0;
+    this.gripVx = 0;
+    this.ref = Float64Array.from(this.pos);
+    for (let i = 0; i < this.n; i++) {
+      this.frac[i] = clamp01((this.ref[3 * i]! - this.leftX) / this.gauge);
+    }
     this.forceSmooth = 0;
     this.uxSmooth = 0;
     this.force = 0;
@@ -447,7 +473,7 @@ export class Bar {
     if (measure) {
       let f = 0;
       for (const i of this.rightIdx) f -= frc[3 * i]!;
-      this.force = f - this.force0;
+      this.force = f;
     }
   }
 
@@ -459,27 +485,54 @@ export class Bar {
     });
   }
 
+  /** One time step with the right grip as a free rigid body pulled by `force` along x */
+  private stepForceControlled(force: number, maxUx: number): void {
+    const acc = (force - this.force - this.gripDamp * this.gripVx) / this.gripMass;
+    this.gripVx += acc * DT;
+    this.ux += this.gripVx * DT;
+    if (this.ux > maxUx) {
+      this.ux = maxUx;
+      this.gripVx = Math.min(0, this.gripVx);
+    }
+    this.placeGrip();
+    this.integrate(true);
+  }
+
   /**
-   * Advance `steps` time steps while the right grip moves towards the target
-   * displacement at no more than `speed` (sigma per unit time). Returns the
-   * mean force on the right grip during the steps.
+   * Advance `steps` time steps and return the mean force on the right grip.
+   *
+   * - displacement control: the grip moves towards `ux` at no more than `speed`
+   *   (sigma per unit time). The stress is read from the forces on the grip.
+   *   With the grip at zero displacement the bar is unloaded, so the stress
+   *   is reported as zero instead of thermal noise.
+   * - force control: a force is applied to the free grip (`force` = 0 leaves it
+   *   free) and the bar's elongation is the response. The stress is the applied
+   *   force over the original cross-section, with no measurement noise.
+   *
+   * `uy` is the sideways (shear) displacement of the grip in both cases.
    */
-  advance(steps: number, targetUx: number, targetUy: number, speed: number): number {
+  advance(steps: number, cmd: Command): number {
     let sum = 0;
-    const maxMove = speed * DT;
+    const maxMove = cmd.speed * DT;
     for (let s = 0; s < steps; s++) {
-      const dx = clampStep(targetUx - this.ux, maxMove);
-      const dy = clampStep(targetUy - this.uy, maxMove);
-      this.ux += dx;
+      const dy = clampStep(cmd.uy - this.uy, maxMove);
       this.uy += dy;
-      this.gripVx = dx / DT;
       this.gripVy = dy / DT;
-      this.placeGrip();
-      this.integrate(true);
+      if (cmd.mode === 'displacement') {
+        const dx = clampStep(cmd.ux - this.ux, maxMove);
+        this.ux += dx;
+        this.gripVx = dx / DT;
+        this.placeGrip();
+        this.integrate(true);
+      } else {
+        this.stepForceControlled(cmd.force, cmd.maxUx);
+      }
       sum += this.force;
     }
     const mean = sum / Math.max(steps, 1);
-    this.forceSmooth += (mean - this.forceSmooth) * SMOOTH;
+    const unloaded = cmd.mode === 'displacement' && cmd.ux <= 1e-9 && this.ux <= 1e-9;
+    const reading = cmd.mode === 'force' ? cmd.force : unloaded ? 0 : mean;
+    this.forceSmooth += (reading - this.forceSmooth) * SMOOTH;
     this.uxSmooth += (this.ux - this.uxSmooth) * SMOOTH;
     return mean;
   }

@@ -32,12 +32,15 @@ import {
 } from '@core/ui/controls';
 import { createSection, createHelperText } from '@core/ui/panel';
 import { clamp } from '@core/math/validation';
-import { Bar, DT, SIZE_COUNT, type Dim } from './elasticPlastic';
+import { Bar, DT, SIZE_COUNT, type Command, type Dim } from './elasticPlastic';
 
 type Mode = 'elastic' | 'plastic';
+/** Strain control moves the grip and measures the force; stress control applies a force and measures the strain */
+type Control = 'strain' | 'stress';
 
 interface DemoParams {
   mode: Mode;
+  control: Control;
   dim: Dim;
   /** Angle between the pulling direction and the close-packed rows (deg) */
   angle: number;
@@ -58,10 +61,11 @@ interface DemoParams {
 
 const defaultParams: DemoParams = {
   mode: 'elastic',
+  control: 'strain',
   dim: 2,
   angle: 0,
   tilt: 0,
-  T: 0.03,
+  T: 0.02,
   logRate: -2.4,
   shear: 0,
   notch: false,
@@ -73,6 +77,10 @@ const defaultParams: DemoParams = {
 /** Largest applied strain in each mode */
 const MAX_STRAIN: Record<Mode, number> = { elastic: 0.05, plastic: 0.75 };
 const MAX_SHEAR = 0.3;
+/** Largest applied stress in stress control (above the strength in plastic mode, so the bar runs away) */
+const MAX_STRESS: Record<Mode, number> = { elastic: 2.2, plastic: 4 };
+/** Stress-control loading rate is this many times the strain rate (about the modulus / 4) */
+const STRESS_PER_STRAIN = 20;
 /** Bond colour scale: strain that saturates red (stretch) and blue (compression) */
 const COLOR_RANGE: Record<Mode, { pos: number; neg: number }> = {
   elastic: { pos: 0.06, neg: 0.03 },
@@ -108,6 +116,7 @@ function num(v: string | undefined, lo: number, hi: number, fallback: number): n
 
 function parseParams(src: Record<string, string>, params: DemoParams): void {
   if (src.mode === 'elastic' || src.mode === 'plastic') params.mode = src.mode;
+  if (src.control === 'strain' || src.control === 'stress') params.control = src.control;
   if (src.dim === '2' || src.dim === '3') params.dim = src.dim === '3' ? 3 : 2;
   params.angle = Math.round(num(src.angle, 0, 90, params.angle));
   params.tilt = Math.round(num(src.tilt, 0, 90, params.tilt));
@@ -194,6 +203,14 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
   let samples: Sample[] = [{ strain: 0, stress: 0, unloading: false }];
   let stored: StoredCurve[] = [];
   let targetStrain = 0;
+  let targetStress = 0;
+  let appliedStress = 0;
+  /** Strain control, after a release: the grip is free (no external force) */
+  let gripFree = false;
+  let freeFrames = 0;
+  let pendingSet = false;
+  let strainLimit = false;
+  let tempTimer: number | undefined;
   let pulling = false;
   let releasing = false;
   let fractured = false;
@@ -214,6 +231,8 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
   let tiltSlider: SliderControl | null = null;
   let tempSlider: SliderControl | null = null;
   let strainSlider: SliderControl | null = null;
+  let stressSlider: SliderControl | null = null;
+  let controlSelect: SelectControl | null = null;
   let rateSlider: SliderControl | null = null;
   let shearSlider: SliderControl | null = null;
   let notchCheckbox: CheckboxControl | null = null;
@@ -334,6 +353,12 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     cn = bar.coordination();
     samples = [{ strain: 0, stress: 0, unloading: false }];
     targetStrain = 0;
+    targetStress = 0;
+    appliedStress = 0;
+    gripFree = false;
+    freeFrames = 0;
+    pendingSet = false;
+    strainLimit = false;
     pulling = false;
     releasing = false;
     releaseFrames = 0;
@@ -348,6 +373,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     }
     pullButton?.setLabel('Pull');
     strainSlider?.setValue(0);
+    stressSlider?.setValue(0);
     updateVisibility();
     updateLegend();
     render();
@@ -376,35 +402,95 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     // Ease into the motion, so starting does not send a shock wave through the bar
     ramp = releasing || (pulling && !fractured) ? Math.min(1, ramp + dtFrame / 3) : 0;
 
-    if (releasing) {
-      targetStrain = Math.max(0, bar.strain - rate * ramp * dtFrame);
-      releaseFrames = bar.stress <= 0.04 ? releaseFrames + 1 : 0;
-      if (bar.strain <= 0.0005 || releaseFrames >= 6) {
-        releasing = false;
-        permanentSet = Math.max(0, bar.strain);
-        targetStrain = bar.strain;
-        strainSlider?.setValue(clamp(targetStrain / maxS, 0, 1));
+    const uy = shearTarget() * bar.gauge;
+    const speed = 2 * rate * bar.gauge;
+    const stressControl = params.control === 'stress';
+    const lastApplied = appliedStress;
+    let cmd: Command;
+
+    if (stressControl) {
+      const maxSigma = MAX_STRESS[params.mode];
+      const stressRate = rate * STRESS_PER_STRAIN;
+      if (releasing) {
+        targetStress = Math.max(0, targetStress - stressRate * ramp * dtFrame);
+      } else if (pulling && !fractured) {
+        targetStress = Math.min(maxSigma, targetStress + stressRate * ramp * dtFrame);
+        if (targetStress >= maxSigma) stopPulling();
       }
-    } else if (pulling && !fractured) {
-      targetStrain = Math.min(maxS, targetStrain + rate * ramp * dtFrame);
-      if (targetStrain >= maxS) stopPulling();
+      const d = targetStress - appliedStress;
+      const maxD = 2 * stressRate * dtFrame;
+      appliedStress += Math.abs(d) <= maxD ? d : Math.sign(d) * maxD;
+      if (releasing && appliedStress <= 1e-9) {
+        releasing = false;
+        pendingSet = true;
+        freeFrames = 0;
+      }
+      cmd = { mode: 'force', force: appliedStress * bar.area, uy, speed, maxUx: maxS * bar.gauge };
+    } else if (gripFree) {
+      cmd = { mode: 'force', force: 0, uy, speed, maxUx: maxS * bar.gauge };
+    } else {
+      if (releasing) {
+        targetStrain = Math.max(0, bar.strain - rate * ramp * dtFrame);
+        releaseFrames = bar.stress <= 0.04 ? releaseFrames + 1 : 0;
+        if (bar.strain <= 0.0005 || releaseFrames >= 6) {
+          // no external force any more: let go of the grip
+          releasing = false;
+          gripFree = true;
+          pendingSet = true;
+          freeFrames = 0;
+          targetStrain = bar.strain;
+          strainSlider?.setValue(clamp(targetStrain / maxS, 0, 1));
+        }
+      } else if (pulling && !fractured) {
+        targetStrain = Math.min(maxS, targetStrain + rate * ramp * dtFrame);
+        if (targetStrain >= maxS) stopPulling();
+      }
+      cmd = { mode: 'displacement', ux: targetStrain * bar.gauge, uy, speed };
     }
     if (fractured && pulling) stopPulling();
 
     bar.temperature = params.T;
-    bar.advance(steps, targetStrain * bar.gauge, shearTarget() * bar.gauge, 2 * rate * bar.gauge);
+    bar.advance(steps, cmd);
     frame++;
-    if (pulling || releasing) strainSlider?.setValue(clamp(targetStrain / maxS, 0, 1));
+    if (stressControl) {
+      if (pulling || releasing)
+        stressSlider?.setValue(clamp(targetStress / MAX_STRESS[params.mode], 0, 1));
+      if (bar.ux >= maxS * bar.gauge - 1e-6 && pulling) {
+        // strain limit of the demo reached while still being pulled
+        strainLimit = true;
+        stopPulling();
+      }
+    } else if (gripFree) {
+      strainSlider?.setValue(clamp(bar.strain / maxS, 0, 1));
+    } else if (pulling || releasing) {
+      strainSlider?.setValue(clamp(targetStrain / maxS, 0, 1));
+    }
+
+    // Permanent set: strain left once the bar has settled with no external force
+    const unloadedFree = gripFree || (stressControl && appliedStress <= 1e-9 && !pulling);
+    if (pendingSet && unloadedFree) {
+      freeFrames++;
+      if (freeFrames >= 60) {
+        permanentSet = Math.max(0, bar.strainSmooth);
+        pendingSet = false;
+      }
+    }
 
     // Record the curve
     const last = samples[samples.length - 1];
-    const direction =
-      bar.ux < lastUx - 1e-9 ? true : bar.ux > lastUx + 1e-9 ? false : (last?.unloading ?? false);
+    let unloading = last?.unloading ?? false;
+    if (stressControl) {
+      if (appliedStress > lastApplied + 1e-9) unloading = false;
+      else if (appliedStress < lastApplied - 1e-9) unloading = true;
+    } else if (!gripFree) {
+      if (bar.ux < lastUx - 1e-9) unloading = true;
+      else if (bar.ux > lastUx + 1e-9) unloading = false;
+    }
     lastUx = bar.ux;
     if (fractured) {
       // the curve ends at fracture
     } else if (!last || Math.abs(bar.strainSmooth - last.strain) > 0.001) {
-      samples.push({ strain: bar.strainSmooth, stress: bar.stress, unloading: direction });
+      samples.push({ strain: bar.strainSmooth, stress: bar.stress, unloading });
     } else if (samples.length > 1) {
       last.stress = bar.stress;
     }
@@ -414,6 +500,9 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
       fractured = true;
       fractureStrain = bar.strain;
       stopPulling();
+      releasing = false;
+      targetStress = 0;
+      appliedStress = 0;
       samples.push({ strain: bar.strain, stress: 0, unloading: false });
     }
   }
@@ -733,9 +822,20 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     lines.push(
       `<b>${params.dim === 2 ? '2D close-packed layer' : '3D hcp crystal'}</b> · ${bar.n} atoms · pull at ${params.angle}° to the close-packed rows${params.dim === 3 ? `, c-axis tilt ${params.tilt}°` : ''}`
     );
-    lines.push(
-      `Strain ε = ${(bar.strain * 100).toFixed(1)} % (Δ = ${bar.ux.toFixed(2)} σ) · F = ${bar.forceSmooth.toFixed(1)} ε/σ · stress = ${bar.stress.toFixed(2)} ${unit}`
-    );
+    const stress = fractured ? 0 : bar.stress;
+    if (params.control === 'stress') {
+      lines.push(
+        `Applied stress = ${stress.toFixed(2)} ${unit} (F = ${(stress * bar.area).toFixed(1)} ε/σ) → strain ε = ${(bar.strain * 100).toFixed(1)} % (Δ = ${bar.ux.toFixed(2)} σ)`
+      );
+    } else {
+      lines.push(
+        `Strain ε = ${(bar.strain * 100).toFixed(1)} % (Δ = ${bar.ux.toFixed(2)} σ) · ` +
+          (gripFree
+            ? 'grip released: no external force, stress = 0'
+            : `measured F = ${(stress * bar.area).toFixed(1)} ε/σ · stress = ${stress.toFixed(2)} ${unit}`)
+      );
+    }
+    if (strainLimit) lines.push('Strain limit of the demo reached: the bar is still being pulled.');
     if (E !== null) {
       lines.push(
         elastic()
@@ -772,6 +872,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
   function getParamRecord(): Record<string, string> {
     return {
       mode: params.mode,
+      control: params.control,
       dim: String(params.dim),
       angle: String(params.angle),
       tilt: String(params.tilt),
@@ -794,6 +895,8 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
       if (el) el.style.display = on ? '' : 'none';
     };
     show(tiltBox, params.dim === 3);
+    show(strainSlider?.element ?? null, params.control === 'strain');
+    show(stressSlider?.element ?? null, params.control === 'stress');
     show(shearBox, params.mode === 'plastic');
     show(notchBox, params.mode === 'plastic');
     view2d.canvas.style.display = params.dim === 2 ? 'block' : 'none';
@@ -804,6 +907,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
 
   function syncControls(): void {
     modeSelect?.setValue(params.mode);
+    controlSelect?.setValue(params.control);
     dimSelect?.setValue(String(params.dim));
     sizeSelect?.setValue(String(params.size));
     angleSlider?.setValue(params.angle);
@@ -815,6 +919,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     bondsCheckbox?.setChecked(params.bonds);
     ghostCheckbox?.setChecked(params.ghost);
     strainSlider?.setValue(clamp(targetStrain / maxStrain(), 0, 1));
+    stressSlider?.setValue(clamp(targetStress / MAX_STRESS[params.mode], 0, 1));
   }
 
   function addButton(
@@ -895,6 +1000,12 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
       onChange: (v) => {
         params.T = v;
         onChange();
+        // A pristine bar is rebuilt so its stress-free length follows the thermal expansion
+        window.clearTimeout(tempTimer);
+        tempTimer = window.setTimeout(() => {
+          if (samples.length <= 1 && !fractured && targetStrain === 0 && appliedStress === 0)
+            rebuild();
+        }, 300);
       },
     });
     disposables.push(tempSlider);
@@ -964,6 +1075,21 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     // Loading
     const loading = createSection({ title: 'Loading' });
     disposables.push(loading);
+    controlSelect = createSelect({
+      label: 'Loading control',
+      options: [
+        { value: 'strain', label: 'Strain: move the grip, measure the force' },
+        { value: 'stress', label: 'Stress: apply a force, measure the strain' },
+      ],
+      value: params.control,
+      onChange: (v) => {
+        params.control = v as Control;
+        rebuild();
+        onChange();
+      },
+    });
+    disposables.push(controlSelect);
+    loading.content.appendChild(controlSelect.element);
     strainSlider = createSlider({
       label: 'Applied strain',
       min: 0,
@@ -975,18 +1101,41 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
         targetStrain = v * maxStrain();
         stopPulling();
         releasing = false;
+        gripFree = false;
+        pendingSet = false;
         permanentSet = null;
       },
     });
     disposables.push(strainSlider);
     loading.content.appendChild(strainSlider.element);
+    stressSlider = createSlider({
+      label: 'Applied stress',
+      min: 0,
+      max: 1,
+      step: 0.005,
+      value: 0,
+      format: (v) =>
+        (v * MAX_STRESS[params.mode]).toFixed(2) + (params.dim === 2 ? ' ε/σ²' : ' ε/σ³'),
+      onChange: (v) => {
+        targetStress = v * MAX_STRESS[params.mode];
+        stopPulling();
+        releasing = false;
+        pendingSet = false;
+        permanentSet = null;
+      },
+    });
+    disposables.push(stressSlider);
+    loading.content.appendChild(stressSlider.element);
     rateSlider = createSlider({
-      label: 'Pulling speed',
+      label: 'Loading rate',
       min: -3.3,
       max: -1.5,
       step: 0.05,
       value: params.logRate,
-      format: (v) => (Math.pow(10, v) * 1000).toFixed(1) + ' ×10⁻³ /t',
+      format: (v) =>
+        params.control === 'stress'
+          ? (Math.pow(10, v) * STRESS_PER_STRAIN).toFixed(3) + ' stress / t'
+          : (Math.pow(10, v) * 1000).toFixed(1) + ' ×10⁻³ strain / t',
       onChange: (v) => {
         params.logRate = v;
         onChange();
@@ -1033,12 +1182,19 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
         if (fractured) return;
         releasing = false;
         permanentSet = null;
+        pendingSet = false;
+        if (gripFree) {
+          // take hold of the grip again where it is
+          gripFree = false;
+          targetStrain = Math.max(0, bar.strain);
+        }
         pulling = !pulling;
         pullButton?.setLabel(pulling ? 'Pause' : 'Pull');
       },
       'primary'
     );
     addButton(actions, 'Release', () => {
+      if (gripFree) return;
       stopPulling();
       releasing = true;
       releaseFrames = 0;
@@ -1050,7 +1206,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     });
     loading.content.appendChild(
       createHelperText(
-        'Pull, or drag the strain slider. “Release” unloads until the force is zero, so the leftover strain is the permanent set.'
+        'Pull, or drag the slider. “Release” removes the external force: the leftover strain is the permanent set. With no external force the stress is zero. In stress control the stress is exactly what you apply and the bar’s strain is the response; above its strength the bar runs away and fractures.'
       )
     );
     controlsPanel.appendChild(loading.element);
@@ -1154,6 +1310,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     },
     dispose() {
       loop.dispose();
+      window.clearTimeout(tempTimer);
       resizeObserver.disconnect();
       disposables.forEach((d) => d.dispose());
       if (three) {
@@ -1178,6 +1335,8 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     setParams(p: Record<string, string>) {
       const before = JSON.stringify([
         params.mode,
+        params.control,
+        params.size,
         params.dim,
         params.angle,
         params.tilt,
@@ -1186,6 +1345,8 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
       parseParams(p, params);
       const after = JSON.stringify([
         params.mode,
+        params.control,
+        params.size,
         params.dim,
         params.angle,
         params.tilt,
