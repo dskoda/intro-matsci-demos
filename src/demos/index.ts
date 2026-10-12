@@ -18,6 +18,7 @@ import { diffusionAtomisticDemo } from './diffusion-atomistic/DiffusionAtomistic
 import { elasticPlasticDemo } from './elastic-plastic/ElasticPlasticDemo';
 import { shearDislocationDemo } from './shear-dislocation/ShearDislocationDemo';
 import { strengtheningDemo } from './strengthening/StrengtheningDemo';
+import { recrystallizationDemo } from './recrystallization/RecrystallizationDemo';
 
 /**
  * All registered demos.
@@ -36,6 +37,7 @@ export const allDemos: DemoDefinition[] = [
   elasticPlasticDemo,
   shearDislocationDemo,
   strengtheningDemo,
+  recrystallizationDemo,
   // Add new demos here:
 ];
 
@@ -52,4 +54,5 @@ export {
   elasticPlasticDemo,
   shearDislocationDemo,
   strengtheningDemo,
+  recrystallizationDemo,
 };
