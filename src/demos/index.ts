@@ -16,6 +16,8 @@ import { vacancyDiffusionDemo } from './vacancy-diffusion/VacancyDiffusionDemo';
 import { diffusionErfDemo } from './diffusion-erf/DiffusionErfDemo';
 import { diffusionAtomisticDemo } from './diffusion-atomistic/DiffusionAtomisticDemo';
 import { elasticPlasticDemo } from './elastic-plastic/ElasticPlasticDemo';
+import { shearDislocationDemo } from './shear-dislocation/ShearDislocationDemo';
+import { strengtheningDemo } from './strengthening/StrengtheningDemo';
 
 /**
  * All registered demos.
@@ -32,6 +34,8 @@ export const allDemos: DemoDefinition[] = [
   diffusionErfDemo,
   diffusionAtomisticDemo,
   elasticPlasticDemo,
+  shearDislocationDemo,
+  strengtheningDemo,
   // Add new demos here:
 ];
 
@@ -46,4 +50,6 @@ export {
   diffusionErfDemo,
   diffusionAtomisticDemo,
   elasticPlasticDemo,
+  shearDislocationDemo,
+  strengtheningDemo,
 };
