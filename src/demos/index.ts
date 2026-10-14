@@ -19,6 +19,7 @@ import { elasticPlasticDemo } from './elastic-plastic/ElasticPlasticDemo';
 import { shearDislocationDemo } from './shear-dislocation/ShearDislocationDemo';
 import { strengtheningDemo } from './strengthening/StrengtheningDemo';
 import { recrystallizationDemo } from './recrystallization/RecrystallizationDemo';
+import { fractureDemo } from './fracture/FractureDemo';
 
 /**
  * All registered demos.
@@ -38,6 +39,7 @@ export const allDemos: DemoDefinition[] = [
   shearDislocationDemo,
   strengtheningDemo,
   recrystallizationDemo,
+  fractureDemo,
   // Add new demos here:
 ];
 
@@ -55,4 +57,5 @@ export {
   shearDislocationDemo,
   strengtheningDemo,
   recrystallizationDemo,
+  fractureDemo,
 };

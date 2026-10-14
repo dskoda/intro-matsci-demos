@@ -74,7 +74,7 @@ export type Command =
   | { mode: 'force'; force: number; uy: number; speed: number; maxUx: number };
 
 /** Calls fn(i, j, r2) for every pair of points closer than `cutoff` (cell grid) */
-function forEachPair(
+export function forEachPair(
   pos: ArrayLike<number>,
   n: number,
   cutoff: number,
