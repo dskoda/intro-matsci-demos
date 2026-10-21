@@ -20,6 +20,7 @@ import { shearDislocationDemo } from './shear-dislocation/ShearDislocationDemo';
 import { strengtheningDemo } from './strengthening/StrengtheningDemo';
 import { recrystallizationDemo } from './recrystallization/RecrystallizationDemo';
 import { fractureDemo } from './fracture/FractureDemo';
+import { phaseDiagramDemo } from './phase-diagrams/PhaseDiagramDemo';
 
 /**
  * All registered demos.
@@ -40,6 +41,7 @@ export const allDemos: DemoDefinition[] = [
   strengtheningDemo,
   recrystallizationDemo,
   fractureDemo,
+  phaseDiagramDemo,
   // Add new demos here:
 ];
 
@@ -58,4 +60,5 @@ export {
   strengtheningDemo,
   recrystallizationDemo,
   fractureDemo,
+  phaseDiagramDemo,
 };
