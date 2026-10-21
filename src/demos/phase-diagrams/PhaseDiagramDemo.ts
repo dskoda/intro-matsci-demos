@@ -81,7 +81,6 @@ const PHASE_RGB: [number, number, number][] = [
   [245, 158, 66], // α
   [74, 194, 128], // β
 ];
-const INERT_RGB: [number, number, number] = [12, 12, 14];
 
 const rgb = (c: [number, number, number], a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
@@ -220,6 +219,45 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
   }
 
   /** New Monte Carlo lattice at the current state. Starts liquid wherever liquid is stable. */
+  // Inoculant particles only help nucleation; they are not drawn. Their sites are painted with the
+  // phase and composition of the surrounding material, filled inward from the particle edge.
+  let fillOrder = new Int32Array(0);
+  const filled = new Uint8Array(N * N);
+  const dispPhase = new Uint8Array(N * N);
+  const nb = (c: number, d: number) => {
+    const i = c % N;
+    const j = (c - i) / N;
+    if (d === 0) return j * N + ((i + 1) % N);
+    if (d === 1) return j * N + ((i + N - 1) % N);
+    if (d === 2) return ((j + 1) % N) * N + i;
+    return ((j + N - 1) % N) * N + i;
+  };
+
+  function computeFillOrder() {
+    const ph = mc.phase;
+    const done = new Uint8Array(N * N);
+    for (let c = 0; c < N * N; c++) done[c] = ph[c] === INERT ? 0 : 1;
+    const order: number[] = [];
+    for (;;) {
+      const layer: number[] = [];
+      for (let c = 0; c < N * N; c++) {
+        if (done[c]) continue;
+        for (let d = 0; d < 4; d++) {
+          if (done[nb(c, d)]) {
+            layer.push(c);
+            break;
+          }
+        }
+      }
+      if (layer.length === 0) break;
+      for (const c of layer) {
+        done[c] = 1;
+        order.push(c);
+      }
+    }
+    fillOrder = Int32Array.from(order);
+  }
+
   function resetMC(melt = false) {
     ramp = 0;
     mc = new LatticeMC(sys, params.seed);
@@ -230,6 +268,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
       p0 = eq.phases.reduce((a, b) => (b.w > a.w ? b : a)).phase;
     }
     mc.reset(params.x, params.T + K0, p0, params.inoc ? N_INOC : 0);
+    computeFillOrder();
     emaFresh = true;
     clearPath();
   }
@@ -417,7 +456,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     };
     addCheck('tie', 'Tie line & lever rule');
     addCheck('mc', 'Monte Carlo measurements on diagram');
-    addCheck('inoc', 'Inoculant particles (heterogeneous nucleation)', () => resetMC());
+    addCheck('inoc', 'Heterogeneous nucleation sites (not drawn)', () => resetMC());
     controlsPanel.appendChild(disp.element);
 
     const sim = createSection({ title: 'Simulation' });
@@ -815,41 +854,59 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     const data = imgData.data;
     const sp = mc.species;
     const ph = mc.phase;
-    // 3×3 average composition
+    // 3×3 average composition over atoms (inoculant sites excluded)
     for (let j = 0; j < N; j++) {
-      const jm = ((j + N - 1) % N) * N;
-      const j0 = j * N;
-      const jp = ((j + 1) % N) * N;
       for (let i = 0; i < N; i++) {
-        const im = (i + N - 1) % N;
-        const ip = (i + 1) % N;
-        local[j0 + i] =
-          (sp[jm + im]! +
-            sp[jm + i]! +
-            sp[jm + ip]! +
-            sp[j0 + im]! +
-            sp[j0 + i]! +
-            sp[j0 + ip]! +
-            sp[jp + im]! +
-            sp[jp + i]! +
-            sp[jp + ip]!) /
-          9;
+        let sum = 0;
+        let cnt = 0;
+        for (let dj = N - 1; dj <= N + 1; dj++) {
+          const row = ((j + dj) % N) * N;
+          for (let di = N - 1; di <= N + 1; di++) {
+            const o = row + ((i + di) % N);
+            if (ph[o] === INERT) continue;
+            sum += sp[o]!;
+            cnt++;
+          }
+        }
+        local[j * N + i] = cnt > 0 ? sum / cnt : 0;
       }
+    }
+    // Hide inoculants: majority phase and mean composition of already-painted neighbours
+    for (let c = 0; c < N * N; c++) {
+      const p = ph[c]!;
+      dispPhase[c] = p;
+      filled[c] = p === INERT ? 0 : 1;
+    }
+    const votes = new Uint8Array(3);
+    for (const c of fillOrder) {
+      votes.fill(0);
+      let sum = 0;
+      let cnt = 0;
+      for (let d = 0; d < 4; d++) {
+        const o = nb(c, d);
+        if (!filled[o]) continue;
+        votes[dispPhase[o]!]!++;
+        sum += local[o]!;
+        cnt++;
+      }
+      let best = 0;
+      for (let q = 1; q < 3; q++) if (votes[q]! > votes[best]!) best = q;
+      dispPhase[c] = best;
+      local[c] = cnt > 0 ? sum / cnt : 0;
+      filled[c] = 1;
     }
     const view = params.view;
     for (let c = 0; c < N * N; c++) {
-      const p = ph[c]!;
+      const p = dispPhase[c]!;
       let r: number;
       let g: number;
       let b: number;
-      if (p === INERT) {
-        [r, g, b] = INERT_RGB;
-      } else if (view === 'comp') {
+      if (view === 'comp') {
         [r, g, b] = cmap(local[c]!);
         const i = c % N;
         const right = c - i + ((i + 1) % N);
         const down = (c + N) % (N * N);
-        if (ph[right] !== p || ph[down] !== p) {
+        if (dispPhase[right] !== p || dispPhase[down] !== p) {
           r *= 0.55;
           g *= 0.55;
           b *= 0.55;
@@ -903,7 +960,6 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
       for (const p of sys.phases)
         swatch(PHASE_RGB[p]!, PHASE_NAMES[p] === 'L' ? 'liquid L' : `solid ${PHASE_NAMES[p]}`);
     }
-    if (params.inoc) swatch(INERT_RGB, 'inoculant');
     if (view !== 'phase') {
       swatch(null, view === 'both' ? `brighter = richer in ${sys.labelB}` : `${sys.labelA}`);
       if (view === 'comp') {
@@ -925,7 +981,7 @@ function create(container: HTMLElement, options: DemoCreateOptions): DemoInstanc
     for (const p of eq.phases) {
       if (p.phase !== L && p.w > 0.15 && (emaFrac[p.phase] ?? 0) < 0.02 && mc.time > 30) {
         return `${prefix}Undercooled: ${PHASE_NAMES[p.phase]} is stable but has not nucleated yet${
-          params.inoc ? '' : ' (inoculant particles help)'
+          params.inoc ? '' : ' (heterogeneous nucleation sites help)'
         }.`;
       }
     }
