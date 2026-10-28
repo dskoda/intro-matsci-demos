@@ -28,4 +28,5 @@ export const lectures: Lecture[] = [
   { number: 5, title: 'Strength', demos: ['shear-dislocation', 'strengthening'] },
   { number: 6, title: 'Recrystallization & Failure', demos: ['recrystallization', 'fracture'] },
   { number: 8, title: 'Phase diagrams', demos: ['phase-diagrams'] },
+  { number: 9, title: 'Steels', demos: ['steel'] },
 ];

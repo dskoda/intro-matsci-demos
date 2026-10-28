@@ -21,6 +21,7 @@ import { strengtheningDemo } from './strengthening/StrengtheningDemo';
 import { recrystallizationDemo } from './recrystallization/RecrystallizationDemo';
 import { fractureDemo } from './fracture/FractureDemo';
 import { phaseDiagramDemo } from './phase-diagrams/PhaseDiagramDemo';
+import { steelDemo } from './steel/SteelDemo';
 
 /**
  * All registered demos.
@@ -42,6 +43,7 @@ export const allDemos: DemoDefinition[] = [
   recrystallizationDemo,
   fractureDemo,
   phaseDiagramDemo,
+  steelDemo,
   // Add new demos here:
 ];
 
@@ -61,4 +63,5 @@ export {
   recrystallizationDemo,
   fractureDemo,
   phaseDiagramDemo,
+  steelDemo,
 };
