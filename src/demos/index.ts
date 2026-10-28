@@ -22,6 +22,8 @@ import { recrystallizationDemo } from './recrystallization/RecrystallizationDemo
 import { fractureDemo } from './fracture/FractureDemo';
 import { phaseDiagramDemo } from './phase-diagrams/PhaseDiagramDemo';
 import { steelDemo } from './steel/SteelDemo';
+import { sCurveDemo } from './s-curve/SCurveDemo';
+import { tttSteelDemo } from './ttt-steel/TTTSteelDemo';
 
 /**
  * All registered demos.
@@ -44,6 +46,8 @@ export const allDemos: DemoDefinition[] = [
   fractureDemo,
   phaseDiagramDemo,
   steelDemo,
+  sCurveDemo,
+  tttSteelDemo,
   // Add new demos here:
 ];
 
@@ -64,4 +68,6 @@ export {
   fractureDemo,
   phaseDiagramDemo,
   steelDemo,
+  sCurveDemo,
+  tttSteelDemo,
 };

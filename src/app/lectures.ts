@@ -29,4 +29,5 @@ export const lectures: Lecture[] = [
   { number: 6, title: 'Recrystallization & Failure', demos: ['recrystallization', 'fracture'] },
   { number: 8, title: 'Phase diagrams', demos: ['phase-diagrams'] },
   { number: 9, title: 'Steels', demos: ['steel'] },
+  { number: 10, title: 'Phase transformation kinetics', demos: ['s-curve', 'ttt-steel'] },
 ];
