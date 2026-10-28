@@ -217,7 +217,7 @@ export class SteelMicro {
         this.bd[i] = (d2 - d1) / 2;
         this.shade[i] = grainShade[g1]!;
         this.colony[i] = bk;
-        key[i] = this.bd[i]! + 6 * (n1(x, y) - 0.5) + 3 * (n2(x, y) - 0.5);
+        key[i] = this.bd[i] + 6 * (n1(x, y) - 0.5) + 3 * (n2(x, y) - 0.5);
       }
     }
     // Rank → uniform [0, 1]
