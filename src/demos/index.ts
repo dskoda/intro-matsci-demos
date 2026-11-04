@@ -24,6 +24,7 @@ import { phaseDiagramDemo } from './phase-diagrams/PhaseDiagramDemo';
 import { steelDemo } from './steel/SteelDemo';
 import { sCurveDemo } from './s-curve/SCurveDemo';
 import { tttSteelDemo } from './ttt-steel/TTTSteelDemo';
+import { ceramicStructuresDemo } from './ceramic-structures/CeramicStructuresDemo';
 
 /**
  * All registered demos.
@@ -48,6 +49,7 @@ export const allDemos: DemoDefinition[] = [
   steelDemo,
   sCurveDemo,
   tttSteelDemo,
+  ceramicStructuresDemo,
   // Add new demos here:
 ];
 
@@ -70,4 +72,5 @@ export {
   steelDemo,
   sCurveDemo,
   tttSteelDemo,
+  ceramicStructuresDemo,
 };
