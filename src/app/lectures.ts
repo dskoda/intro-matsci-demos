@@ -30,5 +30,9 @@ export const lectures: Lecture[] = [
   { number: 8, title: 'Phase diagrams', demos: ['phase-diagrams'] },
   { number: 9, title: 'Steels', demos: ['steel'] },
   { number: 10, title: 'Phase transformation kinetics', demos: ['s-curve', 'ttt-steel'] },
-  { number: 11, title: 'Ceramics', demos: ['ceramic-structures'] },
+  {
+    number: 12,
+    title: 'Ceramics',
+    demos: ['ceramic-structures', 'amorphous-glass', 'deformation-ionic', 'deformation-glass'],
+  },
 ];

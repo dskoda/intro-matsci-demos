@@ -25,6 +25,11 @@ import { steelDemo } from './steel/SteelDemo';
 import { sCurveDemo } from './s-curve/SCurveDemo';
 import { tttSteelDemo } from './ttt-steel/TTTSteelDemo';
 import { ceramicStructuresDemo } from './ceramic-structures/CeramicStructuresDemo';
+import { amorphousGlassDemo } from './amorphous-glass/AmorphousGlassDemo';
+import {
+  ionicDeformationDemo,
+  glassDeformationDemo,
+} from './ceramic-deformation/CeramicDeformationDemo';
 
 /**
  * All registered demos.
@@ -50,6 +55,9 @@ export const allDemos: DemoDefinition[] = [
   sCurveDemo,
   tttSteelDemo,
   ceramicStructuresDemo,
+  amorphousGlassDemo,
+  ionicDeformationDemo,
+  glassDeformationDemo,
   // Add new demos here:
 ];
 
@@ -73,4 +81,7 @@ export {
   sCurveDemo,
   tttSteelDemo,
   ceramicStructuresDemo,
+  amorphousGlassDemo,
+  ionicDeformationDemo,
+  glassDeformationDemo,
 };
