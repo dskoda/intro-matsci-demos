@@ -30,6 +30,8 @@ import {
   ionicDeformationDemo,
   glassDeformationDemo,
 } from './ceramic-deformation/CeramicDeformationDemo';
+import { electronScatteringDemo } from './electron-scattering/ElectronScatteringDemo';
+import { semiconductorPairsDemo } from './semiconductor-pairs/SemiconductorPairsDemo';
 
 /**
  * All registered demos.
@@ -58,6 +60,8 @@ export const allDemos: DemoDefinition[] = [
   amorphousGlassDemo,
   ionicDeformationDemo,
   glassDeformationDemo,
+  electronScatteringDemo,
+  semiconductorPairsDemo,
   // Add new demos here:
 ];
 
@@ -84,4 +88,6 @@ export {
   amorphousGlassDemo,
   ionicDeformationDemo,
   glassDeformationDemo,
+  electronScatteringDemo,
+  semiconductorPairsDemo,
 };

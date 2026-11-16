@@ -35,4 +35,9 @@ export const lectures: Lecture[] = [
     title: 'Ceramics',
     demos: ['ceramic-structures', 'amorphous-glass', 'deformation-ionic', 'deformation-glass'],
   },
+  {
+    number: 13,
+    title: 'Electrical properties',
+    demos: ['electron-scattering', 'semiconductor-pairs'],
+  },
 ];
