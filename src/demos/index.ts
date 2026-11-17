@@ -32,6 +32,7 @@ import {
 } from './ceramic-deformation/CeramicDeformationDemo';
 import { electronScatteringDemo } from './electron-scattering/ElectronScatteringDemo';
 import { semiconductorPairsDemo } from './semiconductor-pairs/SemiconductorPairsDemo';
+import { bandDiagramsDemo } from './band-diagrams/BandDiagramsDemo';
 
 /**
  * All registered demos.
@@ -62,6 +63,7 @@ export const allDemos: DemoDefinition[] = [
   glassDeformationDemo,
   electronScatteringDemo,
   semiconductorPairsDemo,
+  bandDiagramsDemo,
   // Add new demos here:
 ];
 
@@ -90,4 +92,5 @@ export {
   glassDeformationDemo,
   electronScatteringDemo,
   semiconductorPairsDemo,
+  bandDiagramsDemo,
 };

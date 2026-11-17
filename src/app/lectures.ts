@@ -40,4 +40,5 @@ export const lectures: Lecture[] = [
     title: 'Electrical properties',
     demos: ['electron-scattering', 'semiconductor-pairs'],
   },
+  { number: 14, title: 'Electrical properties: band diagrams', demos: ['band-diagrams'] },
 ];
