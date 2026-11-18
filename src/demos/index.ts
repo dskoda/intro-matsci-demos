@@ -33,6 +33,8 @@ import {
 import { electronScatteringDemo } from './electron-scattering/ElectronScatteringDemo';
 import { semiconductorPairsDemo } from './semiconductor-pairs/SemiconductorPairsDemo';
 import { bandDiagramsDemo } from './band-diagrams/BandDiagramsDemo';
+import { dopedSemiconductorsDemo } from './doped-semiconductors/DopedSemiconductorsDemo';
+import { pnJunctionDemo } from './pn-junction/PNJunctionDemo';
 
 /**
  * All registered demos.
@@ -64,6 +66,8 @@ export const allDemos: DemoDefinition[] = [
   electronScatteringDemo,
   semiconductorPairsDemo,
   bandDiagramsDemo,
+  dopedSemiconductorsDemo,
+  pnJunctionDemo,
   // Add new demos here:
 ];
 
@@ -93,4 +97,6 @@ export {
   electronScatteringDemo,
   semiconductorPairsDemo,
   bandDiagramsDemo,
+  dopedSemiconductorsDemo,
+  pnJunctionDemo,
 };
