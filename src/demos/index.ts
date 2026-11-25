@@ -35,6 +35,7 @@ import { semiconductorPairsDemo } from './semiconductor-pairs/SemiconductorPairs
 import { bandDiagramsDemo } from './band-diagrams/BandDiagramsDemo';
 import { dopedSemiconductorsDemo } from './doped-semiconductors/DopedSemiconductorsDemo';
 import { pnJunctionDemo } from './pn-junction/PNJunctionDemo';
+import { opticalBandgapDemo } from './optical-bandgap/OpticalBandgapDemo';
 
 /**
  * All registered demos.
@@ -68,6 +69,7 @@ export const allDemos: DemoDefinition[] = [
   bandDiagramsDemo,
   dopedSemiconductorsDemo,
   pnJunctionDemo,
+  opticalBandgapDemo,
   // Add new demos here:
 ];
 
@@ -99,4 +101,5 @@ export {
   bandDiagramsDemo,
   dopedSemiconductorsDemo,
   pnJunctionDemo,
+  opticalBandgapDemo,
 };

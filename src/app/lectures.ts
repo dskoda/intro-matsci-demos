@@ -41,4 +41,5 @@ export const lectures: Lecture[] = [
     demos: ['electron-scattering', 'semiconductor-pairs'],
   },
   { number: 14, title: 'Electrical properties: band diagrams', demos: ['band-diagrams', 'doped-semiconductors', 'pn-junction'] },
+  { number: 16, title: 'Optical properties', demos: ['optical-bandgap'] },
 ];
